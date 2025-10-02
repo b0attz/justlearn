@@ -22,12 +22,11 @@ const resultArea = document.getElementById('result-area');
 const failArea = document.getElementById('fail-area');
 const container = document.querySelector('.container');
 const submitBtn = document.getElementById('submit-btn');
-const adminResetBtn = document.getElementById('admin-reset-btn'); 
 
 // --- ตัวแปรสำหรับนับจำนวนครั้งที่ผิด และค่า IG ---
 const MAX_ATTEMPTS = 3; // จำนวนครั้งที่ตอบผิดได้สูงสุด
-const YOUR_IG_USERNAME = "phithak1nkham"; // <<<< แก้ชื่อ IG ของคุณที่นี่!!!!
-const SECRET_CODE = "ILOVEYOU"; // <<<< รหัสลับสำหรับคุณเท่านั้น (เช่นพิมพ์ในช่องว่าง)
+const YOUR_IG_USERNAME = "phithak1nkham"; // IG ของคุณ
+const SECRET_CODE = "ILOVEWHO?"; // รหัสลับสำหรับคุณเท่านั้น
 
 let incorrectAttempts = localStorage.getItem('attempts') ? parseInt(localStorage.getItem('attempts')) : 0;
 // --------------------------------------------------------
@@ -97,7 +96,7 @@ function checkAnswers() {
     failArea.classList.add('hidden');
     
     if (score === totalQuestions) {
-        // ตอบถูกทั้งหมด: แสดงข้อความรัก (ค่า attempts จะยังคงอยู่ ไม่ถูกรีเซ็ตตามที่คุณต้องการ)
+        // ตอบถูกทั้งหมด: แสดงข้อความรัก (โอกาสจะไม่ถูกรีเซ็ต)
         resultArea.classList.remove('hidden');
         quizArea.classList.add('hidden'); 
         submitBtn.classList.add('hidden');
@@ -143,7 +142,16 @@ function resetAllAttempts() {
 
 // ฟังก์ชันตรวจสอบรหัสลับ (ใช้เรียกใน Console)
 function checkSecretCode() {
+    // *** แก้ไข: ย้ายการค้นหาปุ่มมาไว้ในฟังก์ชัน เพื่อให้มั่นใจว่าปุ่มถูกโหลดแล้ว ***
+    const adminResetBtn = document.getElementById('admin-reset-btn');
+    
     const code = prompt("ใส่รหัสลับของคุณเพื่อเปิดใช้งานปุ่มรีเซ็ต:");
+    
+    if (!adminResetBtn) {
+         alert("❌ เกิดข้อผิดพลาด: ไม่พบปุ่มรีเซ็ตใน HTML");
+         return;
+    }
+
     if (code === SECRET_CODE) {
         adminResetBtn.classList.remove('hidden');
         alert("🎉 รหัสถูกต้อง! ปุ่มรีเซ็ตถูกเปิดใช้งานแล้ว (มุมขวาล่าง)");

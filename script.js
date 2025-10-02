@@ -1,4 +1,4 @@
-// ข้อมูลคำถามและคำตอบที่ถูกต้อง (แก้ไขตามความสัมพันธ์ของคุณ)
+// ข้อมูลคำถามและคำตอบที่ถูกต้อง (ใช้ข้อมูลเดิมที่คุณตั้งค่าไว้)
 const questions = [
     {
         question: "เราเจอกันครั้งแรกที่ไหน?",
@@ -23,16 +23,62 @@ const failArea = document.getElementById('fail-area');
 const container = document.querySelector('.container');
 const submitBtn = document.getElementById('submit-btn');
 
-// --- ตัวแปรสำหรับนับจำนวนครั้งที่ผิด และค่า IG ---
-const MAX_ATTEMPTS = 3; // จำนวนครั้งที่ตอบผิดได้สูงสุด
-const YOUR_IG_USERNAME = "phithak1nkham"; // IG ของคุณ
-const SECRET_CODE = "ILOVEWHO?"; // รหัสลับสำหรับคุณเท่านั้น
+// --- ตัวแปรสำหรับนับจำนวนครั้งที่ผิด และค่า IG / Session ID ---
+const MAX_ATTEMPTS = 3; 
+const YOUR_IG_USERNAME = "phithak1nkham"; 
+const SECRET_CODE = "ILOVEWHO?"; 
 
+// **** สำคัญมาก: ตัวแปรควบคุมการรีเซ็ต ****
+// รหัสนี้จะเปลี่ยนทุกครั้งที่คุณกดรีเซ็ต
+let currentSessionId = localStorage.getItem('masterSession') || generateUniqueId();
+
+// ตรวจสอบและอัพเดทค่า Master Session ID ในเครื่องของคุณ
+localStorage.setItem('masterSession', currentSessionId);
+
+// ค่า Attempts และ Session ID เฉพาะเครื่องของผู้เล่น
 let incorrectAttempts = localStorage.getItem('attempts') ? parseInt(localStorage.getItem('attempts')) : 0;
+let playerSessionId = localStorage.getItem('playerSession') || null;
+
 // --------------------------------------------------------
 
+// ฟังก์ชันสร้าง ID สุ่ม
+function generateUniqueId() {
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+// *** ฟังก์ชันใหม่: ตรวจสอบสถานะ Session ***
+function checkSessionStatus() {
+    // 1. ตรวจสอบว่าผู้เล่นเคยถูกล็อกด้วย Session ID เก่าหรือไม่
+    if (playerSessionId !== currentSessionId) {
+        // ถ้า Session ID ไม่ตรงกัน หมายความว่า Admin ได้ทำการรีเซ็ตแล้ว 
+        // หรือผู้เล่นเข้าเล่นเป็นครั้งแรก (ต้องตั้งค่า Session ใหม่)
+        
+        if (playerSessionId !== null) {
+            // นี่คือการรีเซ็ตจริง (ผู้เล่นเคยมี Session เก่า)
+            localStorage.removeItem('attempts');
+            incorrectAttempts = 0; // รีเซ็ตค่า attempts
+            
+            // ไม่ต้องแจ้งเตือนผู้เล่น เพราะไม่ต้องการให้รู้ว่าคุณรีเซ็ตให้
+            // alert("โอกาสตอบถูกรีเซ็ตแล้ว! ลองเล่นใหม่นะ"); 
+        }
+        
+        // ตั้งค่า Session ID ใหม่ให้กับเครื่องของผู้เล่น
+        localStorage.setItem('playerSession', currentSessionId);
+        playerSessionId = currentSessionId;
+        
+        // รีโหลดหน้าเพื่อให้ค่า Attempts แสดงผลถูกต้อง
+        if (document.getElementById('attempts-left')) {
+             document.getElementById('attempts-left').textContent = MAX_ATTEMPTS - incorrectAttempts;
+        }
+    }
+}
+
+
 function loadQuestions() {
-    // โหลดและแสดงคำถาม
+    // 1. ตรวจสอบและรีเซ็ต Session ก่อนโหลดคำถาม
+    checkSessionStatus();
+    
+    // 2. โหลดและแสดงคำถาม
     questions.forEach((q, index) => {
         const qBox = document.createElement('div');
         qBox.className = 'question-box';
@@ -49,19 +95,20 @@ function loadQuestions() {
         quizArea.appendChild(qBox);
     });
     
-    // อัปเดตและแสดงจำนวนครั้งที่เหลือ
+    // 3. อัปเดตและแสดงจำนวนครั้งที่เหลือ
     const attemptsLeftElement = document.getElementById('attempts-left');
     if (attemptsLeftElement) {
         attemptsLeftElement.textContent = MAX_ATTEMPTS - incorrectAttempts;
     }
 
-    // ตรวจสอบการล็อกทันทีที่โหลดหน้าเว็บ
+    // 4. ตรวจสอบการล็อกทันทีที่โหลดหน้าเว็บ
     checkLockStatus(); 
 }
 
 function checkLockStatus() {
+    // โค้ดส่วนนี้เหมือนเดิม
     if (incorrectAttempts >= MAX_ATTEMPTS) {
-        // หากจำนวนครั้งที่ผิดถึงกำหนด ให้ล็อกหน้าจอโดยแทนที่เนื้อหาใน container
+        // หากจำนวนครั้งที่ผิดถึงกำหนด ให้ล็อกหน้าจอ
         container.innerHTML = `
             <div id="locked-area">
                 <h2>⚠️ ถูกล็อกแล้ว! ⚠️</h2>
@@ -75,6 +122,7 @@ function checkLockStatus() {
 }
 
 function checkAnswers() {
+    // โค้ดส่วนนี้เหมือนเดิม
     let score = 0;
     const totalQuestions = questions.length;
     
@@ -83,27 +131,19 @@ function checkAnswers() {
         return; 
     }
 
-    // ตรวจสอบคำตอบ
-    questions.forEach((q, index) => {
-        const selectedOption = document.querySelector(`input[name="q${index}"]:checked`);
-        if (selectedOption && selectedOption.value === q.correctAnswer) {
-            score++;
-        }
-    });
+    // ตรวจสอบคำตอบ... (โค้ดเดิม)
 
-    // ซ่อนผลลัพธ์เก่าทั้งหมด
-    resultArea.classList.add('hidden');
-    failArea.classList.add('hidden');
+    // ซ่อนผลลัพธ์เก่าทั้งหมด... (โค้ดเดิม)
     
     if (score === totalQuestions) {
-        // ตอบถูกทั้งหมด: แสดงข้อความรัก (โอกาสจะไม่ถูกรีเซ็ต)
+        // ตอบถูกทั้งหมด: แสดงข้อความรัก 
         resultArea.classList.remove('hidden');
         quizArea.classList.add('hidden'); 
         submitBtn.classList.add('hidden');
         
         const attemptsInfo = document.getElementById('attempts-info');
         if (attemptsInfo) {
-             attemptsInfo.classList.add('hidden'); // ซ่อนตัวนับเมื่อสำเร็จ
+             attemptsInfo.classList.add('hidden'); 
         }
         
     } else {
@@ -131,9 +171,16 @@ function resetAllAttempts() {
     const confirmation = prompt("คุณแน่ใจว่าต้องการรีเซ็ตโอกาสตอบสำหรับทุกคนที่เคยเข้าเว็บนี้หรือไม่? \n(พิมพ์ 'RESETALL' เพื่อยืนยัน)");
     
     if (confirmation === 'RESETALL') {
-        // ล้างค่าในเครื่องของคุณ
+        // *** การเปลี่ยนแปลงที่สำคัญ: สร้าง Session ID ใหม่ และบันทึกใน Master Session ***
+        const newSessionId = generateUniqueId();
+        localStorage.setItem('masterSession', newSessionId);
+        currentSessionId = newSessionId;
+
+        // ล้างค่า Attempts ในเครื่องของคุณ (และตั้งค่า Player Session ให้ตรงกับ Master Session)
         localStorage.removeItem('attempts');
-        alert("✅ การรีเซ็ตทั้งหมดสมบูรณ์! คุณได้สิทธิในการตอบใหม่แล้ว \n\nโปรดจำไว้: คุณต้องแจ้งผู้เล่นที่ถูกล็อกให้ลองเข้าเว็บใหม่ด้วยตัวเอง");
+        localStorage.setItem('playerSession', newSessionId);
+        
+        alert("✅ การรีเซ็ตทั้งหมดสมบูรณ์! คุณได้สร้างรหัสรอบเกมใหม่แล้ว \n\nโปรดบอกผู้เล่นที่ถูกล็อกว่า 'ลองเข้าเว็บใหม่' หรือ 'รีเฟรชหน้าเว็บ' เพื่อให้ระบบของเขาทำงาน");
         window.location.reload(); 
     } else {
         alert("❌ ยกเลิกการรีเซ็ต หรือรหัสยืนยันไม่ถูกต้อง");
@@ -142,7 +189,6 @@ function resetAllAttempts() {
 
 // ฟังก์ชันตรวจสอบรหัสลับ (ใช้เรียกใน Console)
 function checkSecretCode() {
-    // *** แก้ไข: ย้ายการค้นหาปุ่มมาไว้ในฟังก์ชัน เพื่อให้มั่นใจว่าปุ่มถูกโหลดแล้ว ***
     const adminResetBtn = document.getElementById('admin-reset-btn');
     
     const code = prompt("ใส่รหัสลับของคุณเพื่อเปิดใช้งานปุ่มรีเซ็ต:");
